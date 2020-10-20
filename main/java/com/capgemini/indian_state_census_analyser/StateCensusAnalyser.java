@@ -9,26 +9,22 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 
 import com.capgemini.indianstatecensusanalyser.customexception.CensusAnalyserException;
-import com.capgemini.indianstatecensusanalyser.customexception.CensusAnalyserException.ExceptionType;
-import com.capgemini.indianstatecensusanalyser.customexception.CodeAnalyserException;
 import com.capgemini.indianstatecensusanalyser.model.CSVStates;
 import com.capgemini.indianstatecensusanalyser.model.IndiaStateCensus;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 
+
 public class StateCensusAnalyser {
+	/**
+	 * @param censusDataPath
+	 * @return number of entries
+	 * @throws CensusAnalyserException
+	 */
 	public int loadCensusData(String censusDataPath) throws CensusAnalyserException {
 		try (Reader reader = Files.newBufferedReader(Paths.get(censusDataPath));) {
-			CsvToBeanBuilder<IndiaStateCensus> csvToBeanBuilder = new CsvToBeanBuilder<IndiaStateCensus>(reader);
-			csvToBeanBuilder.withType(IndiaStateCensus.class);
-			csvToBeanBuilder.withIgnoreLeadingWhiteSpace(true);
-			CsvToBean<IndiaStateCensus> csvToBean = csvToBeanBuilder.build();
-			Iterator<IndiaStateCensus> censusIterator = csvToBean.iterator();
-			int noOfEntries = 0;
-			while (censusIterator.hasNext()) {
-				noOfEntries++;
-				IndiaStateCensus censusData = censusIterator.next();
-			}
+			Iterator<IndiaStateCensus> censusIterator = this.getCSVFileIterator(reader, IndiaStateCensus.class);
+			int noOfEntries = this.getCount(censusIterator);
 			BufferedReader br = new BufferedReader(new FileReader(censusDataPath));
 			String line = "";
 			int ctr = 0;
@@ -50,48 +46,69 @@ public class StateCensusAnalyser {
 		} catch (IOException e) {
 			throw new CensusAnalyserException("Invalid file location",
 					CensusAnalyserException.ExceptionType.INVALID_FILE_PATH);
-		} catch (IllegalStateException e) {
-			throw new CensusAnalyserException("Wrong class type",
-					CensusAnalyserException.ExceptionType.INVALID_CLASS_TYPE);
 		}
 	}
 
-	public int loadCodeData(String codeDataPath) throws CodeAnalyserException {
+	/**
+	 * @param codeDataPath
+	 * @return number of entries
+	 * @throws CodeAnalyserException
+	 * @throws CensusAnalyserException 
+	 */
+	public int loadCodeData(String codeDataPath) throws CensusAnalyserException {
 		try (Reader reader = Files.newBufferedReader(Paths.get(codeDataPath));) {
-			CsvToBeanBuilder<CSVStates> csvToBeanBuilder = new CsvToBeanBuilder<CSVStates>(reader);
-			csvToBeanBuilder.withType(CSVStates.class);
-			csvToBeanBuilder.withIgnoreLeadingWhiteSpace(true);
-			CsvToBean<CSVStates> csvToBean = csvToBeanBuilder.build();
-			Iterator<CSVStates> censusIterator = csvToBean.iterator();
-			int noOfEntries = 0;
-			while (censusIterator.hasNext()) {
-				noOfEntries++;
-				CSVStates codeData = censusIterator.next();
-			}
+			Iterator<CSVStates> censusIterator = this.getCSVFileIterator(reader, CSVStates.class);
+			int noOfEntries = this.getCount(censusIterator);
 			BufferedReader br = new BufferedReader(new FileReader(codeDataPath));
 			String line = "";
 			int ctr = 0;
 			while ((line = br.readLine()) != null) {
 				if (!line.contains(","))
-					throw new CodeAnalyserException("Invalid delimiter For Code Data",
-							CodeAnalyserException.ExceptionType.INVALID_DELIMITER);
+					throw new CensusAnalyserException("Invalid delimiter For Code Data",
+							CensusAnalyserException.ExceptionType.INVALID_DELIMITER);
 				if (ctr == 0) {
 					String[] headers = line.split(",");
 					if (!(headers[0].equals("SrNo") && headers[1].equals("State Name") && headers[2].equals("TIN")
 							&& headers[3].equals("StateCode")))
-						throw new CodeAnalyserException("Invalid header(s) For Code Data",
-								CodeAnalyserException.ExceptionType.INVALID_HEADER);
+						throw new CensusAnalyserException("Invalid header(s) For Code Data",
+								CensusAnalyserException.ExceptionType.INVALID_HEADER);
 					ctr++;
 				}
 			}
 			br.close();
 			return noOfEntries;
 		} catch (IOException e) {
-			throw new CodeAnalyserException("Invalid File Path For Code Data",
-					CodeAnalyserException.ExceptionType.INVALID_FILE_PATH);
-		} catch (IllegalStateException e) {
-			throw new CodeAnalyserException("Invalid Class Type For Code Data",
-					CodeAnalyserException.ExceptionType.INVALID_CLASS_TYPE);
+			throw new CensusAnalyserException("Invalid File Path For Code Data",
+					CensusAnalyserException.ExceptionType.INVALID_FILE_PATH);
 		}
+	}
+
+	/**
+	 * @param reader
+	 * @param csvClass
+	 * @return CSV Census File iterator
+	 * @throws CensusAnalyserException
+	 */
+	private <E> Iterator<E> getCSVFileIterator(Reader reader, Class csvClass)
+			throws CensusAnalyserException {
+		try {
+			CsvToBeanBuilder<E> csvToBeanBuilder = new CsvToBeanBuilder<E>(reader);
+			csvToBeanBuilder.withType(csvClass);
+			csvToBeanBuilder.withIgnoreLeadingWhiteSpace(true);
+			CsvToBean<E> csvToBean = csvToBeanBuilder.build();
+			return csvToBean.iterator();
+		} catch (IllegalStateException e) {
+			throw new CensusAnalyserException("Wrong class type",
+					CensusAnalyserException.ExceptionType.INVALID_CLASS_TYPE);
+		}
+	}
+	
+	private <E> int getCount(Iterator<E> iterator) {
+		int noOfEntries = 0;
+		while (iterator.hasNext()) {
+			noOfEntries++;
+			E censusData = iterator.next();
+		}
+		return noOfEntries;
 	}
 }
