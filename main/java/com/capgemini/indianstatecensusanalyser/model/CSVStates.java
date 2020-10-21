@@ -25,4 +25,12 @@ public class CSVStates {
 		return "CSVStates [serialNo=" + serialNo + ", stateName=" + stateName + ", tin=" + tin + ", stateCode="
 				+ stateCode + "]";
 	}
+
+	public String getStateCode() {
+		return stateCode;
+	}
+
+	public void setStateCode(String stateCode) {
+		this.stateCode = stateCode;
+	}
 }

@@ -6,9 +6,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,12 +17,16 @@ import com.capgemini.indianstatecensusanalyser.customexception.CensusAnalyserExc
 import com.capgemini.indianstatecensusanalyser.customexception.CensusAnalyserException.ExceptionType;
 import com.capgemini.indianstatecensusanalyser.customexception.ICSVBuilder;
 import com.google.gson.Gson;
-import com.opencsv.bean.CsvToBean;
-import com.opencsv.bean.CsvToBeanBuilder;
 import com.opencsv.exceptions.CsvException;
 
+/**
+ * @author vishw
+ *
+ */
 public class StateCensusAnalyser {
+
 	List<IndiaStateCensus> censusCSVList = null;
+	List<CSVStates> codeCSVList = null;
 
 	/**
 	 * @param censusDataPath
@@ -69,7 +71,6 @@ public class StateCensusAnalyser {
 	public int loadCodeData(String codeDataPath) throws CensusAnalyserException {
 		try (Reader reader = Files.newBufferedReader(Paths.get(codeDataPath));) {
 			ICSVBuilder csvBuilder = CSVBuilderFactory.createCSVBuilder();
-			List<CSVStates> codeCSVList = null;
 			try {
 				codeCSVList = csvBuilder.getCSVFileList(reader, CSVStates.class);
 			} catch (CsvException e) {
@@ -99,14 +100,29 @@ public class StateCensusAnalyser {
 		}
 	}
 
+	/**
+	 * @return sorted Json string
+	 * @throws CensusAnalyserException
+	 */
 	public String getStateWiseSortedCensusData() throws CensusAnalyserException {
-		if(censusCSVList==null||censusCSVList.size()==0)
+		if (censusCSVList == null || censusCSVList.size() == 0)
 			throw new CensusAnalyserException("No Census Data", ExceptionType.NO_CENSUS_DATA);
 		List<IndiaStateCensus> sortedList = censusCSVList.stream()
-				.sorted(Comparator.comparing(IndiaStateCensus::getStateName))
-				.collect(Collectors.toList());
+				.sorted(Comparator.comparing(IndiaStateCensus::getStateName)).collect(Collectors.toList());
 		String sortedCensusDataJson = new Gson().toJson(sortedList);
 		return sortedCensusDataJson;
 	}
 
+	/**
+	 * @return sorted string
+	 * @throws CensusAnalyserException
+	 */
+	public String getCodeWiseSortedCodeData() throws CensusAnalyserException {
+		if (codeCSVList == null || codeCSVList.size() == 0)
+			throw new CensusAnalyserException("No Code Data", ExceptionType.NO_CENSUS_DATA);
+		List<CSVStates> sortedList = codeCSVList.stream().sorted(Comparator.comparing(CSVStates::getStateCode))
+				.collect(Collectors.toList());
+		String sortedCodeDataJson = new Gson().toJson(sortedList);
+		return sortedCodeDataJson;
+	}
 }
