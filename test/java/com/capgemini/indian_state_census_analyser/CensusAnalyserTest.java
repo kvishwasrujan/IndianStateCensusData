@@ -117,7 +117,7 @@ public class CensusAnalyserTest extends TestCase {
 		IndiaStateCensus[] censusData = new Gson().fromJson(sortedCensusData, IndiaStateCensus[].class);
 		assertEquals("Andhra Pradesh", censusData[0].getStateName());
 	}
-	
+
 	@Test
 	public void givenIndianCensusData_WhenListIsNull_ShouldThrowExceptionOfTypeNoCensusData() {
 		String sortedCensusData = "";
@@ -125,19 +125,20 @@ public class CensusAnalyserTest extends TestCase {
 			sortedCensusData = stateCensusAnalyser.getStateWiseSortedCensusData();
 			IndiaStateCensus[] censusData = new Gson().fromJson(sortedCensusData, IndiaStateCensus[].class);
 		} catch (CensusAnalyserException e) {
-			assertEquals(CensusAnalyserException.ExceptionType.NO_CENSUS_DATA,e.type);
+			assertEquals(CensusAnalyserException.ExceptionType.NO_CENSUS_DATA, e.type);
 		}
 	}
-	
+
 	@Test
-	public void givenIndianStateCodeData_WhenSortedOnStateCode_ShouldReturnSortedResult() throws CensusAnalyserException {
+	public void givenIndianStateCodeData_WhenSortedOnStateCode_ShouldReturnSortedResult()
+			throws CensusAnalyserException {
 		String sortedCodeData = "";
 		stateCensusAnalyser.loadCodeData(STATE_CODE_DATA_PATH);
 		sortedCodeData = stateCensusAnalyser.getCodeWiseSortedCodeData();
 		CSVStates[] censusData = new Gson().fromJson(sortedCodeData, CSVStates[].class);
 		assertEquals("AD", censusData[0].getStateCode());
 	}
-	
+
 	@Test
 	public void givenIndianStateCodeData_WhenListIsNull_ShouldThrowExceptionOfTypeNoCodeData() {
 		String sortedCodeData = "";
@@ -145,7 +146,17 @@ public class CensusAnalyserTest extends TestCase {
 			sortedCodeData = stateCensusAnalyser.getCodeWiseSortedCodeData();
 			CSVStates[] censusData = new Gson().fromJson(sortedCodeData, CSVStates[].class);
 		} catch (CensusAnalyserException e) {
-			assertEquals(CensusAnalyserException.ExceptionType.NO_CODE_DATA,e.type);
+			assertEquals(CensusAnalyserException.ExceptionType.NO_CODE_DATA, e.type);
 		}
+
+	}
+
+	@Test
+	public void givenIndianCensusData_WhenSortedOnPopulation_ShouldReturnSortedResult() throws CensusAnalyserException {
+		String sortedCensusData = "";
+		stateCensusAnalyser.loadCensusData(CENSUS_DATA_PATH);
+		sortedCensusData = stateCensusAnalyser.getPopulationWiseSortedCensusData();
+		IndiaStateCensus[] censusData = new Gson().fromJson(sortedCensusData, IndiaStateCensus[].class);
+		assertEquals(199812341, censusData[0].getPopulation());
 	}
 }
