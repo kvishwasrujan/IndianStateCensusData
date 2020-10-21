@@ -167,4 +167,12 @@ public class CensusAnalyserTest extends TestCase {
 		IndiaStateCensus[] censusData = new Gson().fromJson(sortedCensusData, IndiaStateCensus[].class);
 		assertEquals(1102, censusData[0].getDensity());
 	}
+	@Test
+	public void givenIndianCensusData_WhenSortedOnArea_ShouldReturnSortedResult() throws CensusAnalyserException {
+		String sortedCensusData = "";
+		stateCensusAnalyser.loadCensusData(CENSUS_DATA_PATH);
+		sortedCensusData = stateCensusAnalyser.getAreaWiseSortedCensusData();
+		IndiaStateCensus[] censusData = new Gson().fromJson(sortedCensusData, IndiaStateCensus[].class);
+		assertEquals(342239, censusData[0].getArea());
+	}
 }
