@@ -6,16 +6,26 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import com.capgemini.indianstatecensusanalyser.customexception.CensusAnalyserException;
 import com.capgemini.indianstatecensusanalyser.model.CSVStates;
 import com.capgemini.indianstatecensusanalyser.model.IndiaStateCensus;
+import com.capgemini.indianstatecensusanalyser.customexception.CSVBuilderFactory;
+import com.capgemini.indianstatecensusanalyser.customexception.CensusAnalyserException;
+import com.capgemini.indianstatecensusanalyser.customexception.CensusAnalyserException.ExceptionType;
+import com.capgemini.indianstatecensusanalyser.customexception.ICSVBuilder;
+import com.google.gson.Gson;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
-
+import com.opencsv.exceptions.CsvException;
 
 public class StateCensusAnalyser {
+	List<IndiaStateCensus> censusCSVList = null;
+
 	/**
 	 * @param censusDataPath
 	 * @return number of entries
@@ -23,92 +33,80 @@ public class StateCensusAnalyser {
 	 */
 	public int loadCensusData(String censusDataPath) throws CensusAnalyserException {
 		try (Reader reader = Files.newBufferedReader(Paths.get(censusDataPath));) {
-			Iterator<IndiaStateCensus> censusIterator = this.getCSVFileIterator(reader, IndiaStateCensus.class);
-			int noOfEntries = this.getCount(censusIterator);
+			ICSVBuilder csvBuilder = CSVBuilderFactory.createCSVBuilder();
+			try {
+				censusCSVList = csvBuilder.getCSVFileList(reader, IndiaStateCensus.class);
+			} catch (CsvException e) {
+				throw new CensusAnalyserException("Invalid Class Type", ExceptionType.INVALID_CLASS_TYPE);
+			}
+			int noOfEntries = censusCSVList.size();
 			BufferedReader br = new BufferedReader(new FileReader(censusDataPath));
 			String line = "";
 			int ctr = 0;
 			while ((line = br.readLine()) != null) {
 				if (!line.contains(","))
-					throw new CensusAnalyserException("Invalid delimiter",
-							CensusAnalyserException.ExceptionType.INVALID_DELIMITER);
+					throw new CensusAnalyserException("Invalid delimiter", ExceptionType.INVALID_DELIMITER);
 				if (ctr == 0) {
 					String[] headers = line.split(",");
 					if (!(headers[0].equals("State") && headers[1].equals("Population")
 							&& headers[2].equals("AreaInSqKm") && headers[3].equals("DensityPerSqKm")))
-						throw new CensusAnalyserException("Invalid headers",
-								CensusAnalyserException.ExceptionType.INVALID_HEADER);
+						throw new CensusAnalyserException("Invalid headers", ExceptionType.INVALID_HEADER);
 					ctr++;
 				}
 			}
 			br.close();
 			return noOfEntries;
 		} catch (IOException e) {
-			throw new CensusAnalyserException("Invalid file location",
-					CensusAnalyserException.ExceptionType.INVALID_FILE_PATH);
+			throw new CensusAnalyserException("Invalid file location", ExceptionType.INVALID_FILE_PATH);
 		}
 	}
 
 	/**
 	 * @param codeDataPath
 	 * @return number of entries
-	 * @throws CodeAnalyserException
-	 * @throws CensusAnalyserException 
+	 * @throws CensusAnalyserException
 	 */
 	public int loadCodeData(String codeDataPath) throws CensusAnalyserException {
 		try (Reader reader = Files.newBufferedReader(Paths.get(codeDataPath));) {
-			Iterator<CSVStates> censusIterator = this.getCSVFileIterator(reader, CSVStates.class);
-			int noOfEntries = this.getCount(censusIterator);
+			ICSVBuilder csvBuilder = CSVBuilderFactory.createCSVBuilder();
+			List<CSVStates> codeCSVList = null;
+			try {
+				codeCSVList = csvBuilder.getCSVFileList(reader, CSVStates.class);
+			} catch (CsvException e) {
+				throw new CensusAnalyserException("Invalid Class Type", ExceptionType.INVALID_CLASS_TYPE);
+			}
+			int noOfEntries = codeCSVList.size();
 			BufferedReader br = new BufferedReader(new FileReader(codeDataPath));
 			String line = "";
 			int ctr = 0;
 			while ((line = br.readLine()) != null) {
 				if (!line.contains(","))
 					throw new CensusAnalyserException("Invalid delimiter For Code Data",
-							CensusAnalyserException.ExceptionType.INVALID_DELIMITER);
+							ExceptionType.INVALID_DELIMITER);
 				if (ctr == 0) {
 					String[] headers = line.split(",");
 					if (!(headers[0].equals("SrNo") && headers[1].equals("State Name") && headers[2].equals("TIN")
 							&& headers[3].equals("StateCode")))
 						throw new CensusAnalyserException("Invalid header(s) For Code Data",
-								CensusAnalyserException.ExceptionType.INVALID_HEADER);
+								ExceptionType.INVALID_HEADER);
 					ctr++;
 				}
 			}
 			br.close();
 			return noOfEntries;
 		} catch (IOException e) {
-			throw new CensusAnalyserException("Invalid File Path For Code Data",
-					CensusAnalyserException.ExceptionType.INVALID_FILE_PATH);
+			throw new CensusAnalyserException("Invalid File Path For Code Data", ExceptionType.INVALID_FILE_PATH);
 		}
 	}
 
-	/**
-	 * @param reader
-	 * @param csvClass
-	 * @return CSV Census File iterator
-	 * @throws CensusAnalyserException
-	 */
-	private <E> Iterator<E> getCSVFileIterator(Reader reader, Class csvClass)
-			throws CensusAnalyserException {
-		try {
-			CsvToBeanBuilder<E> csvToBeanBuilder = new CsvToBeanBuilder<E>(reader);
-			csvToBeanBuilder.withType(csvClass);
-			csvToBeanBuilder.withIgnoreLeadingWhiteSpace(true);
-			CsvToBean<E> csvToBean = csvToBeanBuilder.build();
-			return csvToBean.iterator();
-		} catch (IllegalStateException e) {
-			throw new CensusAnalyserException("Wrong class type",
-					CensusAnalyserException.ExceptionType.INVALID_CLASS_TYPE);
-		}
+	public String getStateWiseSortedCensusData() throws CensusAnalyserException {
+		if(censusCSVList==null||censusCSVList.size()==0)
+			throw new CensusAnalyserException("No Census Data", ExceptionType.NO_CENSUS_DATA);
+		List<IndiaStateCensus> sortedList = censusCSVList.stream()
+				.sorted(Comparator.comparing(IndiaStateCensus::getStateName))
+				.collect(Collectors.toList());
+		String sortedCensusDataJson = new Gson().toJson(sortedList);
+		return sortedCensusDataJson;
 	}
-	
-	private <E> int getCount(Iterator<E> iterator) {
-		int noOfEntries = 0;
-		while (iterator.hasNext()) {
-			noOfEntries++;
-			E censusData = iterator.next();
-		}
-		return noOfEntries;
-	}
+
 }
